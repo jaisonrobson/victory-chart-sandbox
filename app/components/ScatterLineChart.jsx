@@ -22,7 +22,12 @@ const ScatterLineChart = ({
 
     return (
         <View style={styles.container}>
-            <VictoryChart containerComponent={<VictoryVoronoiContainer />} style={style} {...props}>
+            <VictoryChart
+                containerComponent={<VictoryVoronoiContainer />}
+                style={style}
+                animate={{ duration: 2000, easing: 'linear' }}
+                {...props}
+            >
                 <VictoryLine
                     style={{
                         data: { stroke: "#c43a31" },
