@@ -13,6 +13,7 @@ const Main = () => (
                 { x: 3, y: 2 },
                 { x: 4, y: 1 }
             ]}
+            padding={{ top: 50, left: 50, right: 50, bottom: 50 }}
         />
     </View>
 )
