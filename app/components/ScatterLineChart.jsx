@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { View, StyleSheet } from 'react-native'
+import _ from 'lodash'
 
 import {
     VictoryChart,
@@ -26,6 +27,11 @@ const ScatterLineChart = ({
     const [data, setData] = useState(dataProp)
     const [zoomDomain, setZoomDomain] = useState({})
     const [selectedDomain, setSelectedDomain] = useState({})
+
+    const getDomain = () => ({
+        x: [_.minBy(data, value => value.x).x - 2, _.maxBy(data, value => value.x).x + 2],
+        y: [_.minBy(data, value => value.y).y - 2, _.maxBy(data, value => value.y).y + 2],
+    })
 
     const onChangeZoomDomain = (domain) =>
         setZoomDomain(prevState => prevState !== domain ? domain : prevState)
@@ -55,7 +61,7 @@ const ScatterLineChart = ({
                         ...lineStyle
                     }}
                     data={data}
-                    domain={{ x: [0, 5], y: [0, 3] }}
+                    domain={getDomain()}
                     {...lineProps}
                 />
 
@@ -69,7 +75,7 @@ const ScatterLineChart = ({
                     labelComponent={<VictoryTooltip />}
                     size={7}
                     data={data}
-                    domain={{ x: [0, 5], y: [0, 3] }}
+                    domain={getDomain()}
                     {...scatterProps}
                 />
             </VictoryChart>
@@ -98,7 +104,7 @@ const ScatterLineChart = ({
                         ...lineStyle
                     }}
                     data={data}
-                    domain={{ x: [0, 5], y: [0, 3] }}
+                    domain={getDomain()}
                     {...lineProps}
                 />
             </VictoryChart>
