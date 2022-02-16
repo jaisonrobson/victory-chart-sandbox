@@ -9,6 +9,7 @@ import {
     VictoryScatter,
     VictoryTooltip,
     VictoryBrushContainer,
+    VictoryVoronoiContainer,
     createContainer,
 } from 'victory-native'
 
@@ -19,9 +20,15 @@ const ScatterLineChart = ({
     lineProps = {},
     scatterStyle = {},
     scatterProps = {},
+    zoomDimension = undefined,
+    zoomScale = undefined,
+    zoomBrushAxisValues = [],
+    zoomBrushPercentualSize = 30,
+    zoomBrushAxisValuesExtractor = (value) => value,
+    zoomBrushAxisFormatter = (value) => value,
+    scale = undefined,
     data: dataProp = [],
     style = {},
-    xZoom = false,
     ...props
 }) => {
     const [data, setData] = useState(dataProp)
@@ -39,19 +46,47 @@ const ScatterLineChart = ({
     const onChangeSelectedDomain = (domain) =>
         setSelectedDomain(prevState => prevState !== domain ? domain : prevState)
 
+    const isDimensionalZoomEnabled = () => _.toLower(zoomDimension) === 'x' || _.toLower(zoomDimension) === 'y'
+
+    const calculateBrushMaximumPercentualSize = () => (
+        Math.abs(zoomBrushAxisValuesExtractor(_.minBy(data, zoomBrushAxisValuesExtractor)))
+        + Math.abs(zoomBrushAxisValuesExtractor(_.maxBy(data, zoomBrushAxisValuesExtractor)))
+        * (zoomBrushPercentualSize / 100)
+    )
+
+    const getBrushDomain = () =>
+        _.toLower(zoomDimension) === 'x'
+            ? ({
+                x: [
+                    zoomBrushAxisValuesExtractor(_.minBy(data, zoomBrushAxisValuesExtractor)),
+                    calculateBrushMaximumPercentualSize()
+                ]
+            })
+            :
+            ({
+                y: [
+                    zoomBrushAxisValuesExtractor(_.minBy(data, zoomBrushAxisValuesExtractor)),
+                    calculateBrushMaximumPercentualSize()
+                ]
+            })
+
     return (
         <View style={styles.container}>
             <VictoryChart
                 containerComponent={
-                    <VictoryZoomVoronoiContainer
-                        responsive={true}
-                        zoomDimension='x'
-                        zoomDomain={zoomDomain}
-                        onZoomDomainChange={onChangeSelectedDomain}
-                    />
+                    isDimensionalZoomEnabled()
+                        ? (
+                            <VictoryZoomVoronoiContainer
+                                responsive={true}
+                                zoomDimension={_.toLower(zoomDimension)}
+                                zoomDomain={zoomDomain}
+                                onZoomDomainChange={onChangeSelectedDomain}
+                            />
+                        )
+                        : <VictoryVoronoiContainer />
                 }
                 style={style}
-                scale={{ x: "linear" }}
+                scale={scale}
                 {...props}
             >
                 <VictoryLine
@@ -80,34 +115,46 @@ const ScatterLineChart = ({
                 />
             </VictoryChart>
 
-            <VictoryChart
-                style={{ flex: 1 }}
-                scale={{ x: "linear" }}
-                containerComponent={
-                    <VictoryBrushContainer
-                        responsive={false}
-                        brushDimension="x"
-                        brushDomain={selectedDomain}
-                        onBrushDomainChange={onChangeZoomDomain}
-                    />
-                }
-            >
-                <VictoryAxis
-                    tickValues={data.map((value) => value.x)}
-                    tickFormat={(value) => value}
-                />
+            {
+                isDimensionalZoomEnabled()
+                    ? (
+                        <VictoryChart
+                            style={{ flex: 1 }}
+                            scale={zoomScale}
+                            containerComponent={
+                                <VictoryBrushContainer
+                                    allowDraw={false}
+                                    allowResize={false}
+                                    responsive={false}
+                                    brushDimension={_.toLower(zoomDimension)}
+                                    brushDomain={isDimensionalZoomEnabled() ? getBrushDomain() : selectedDomain}
+                                    onBrushDomainChange={onChangeZoomDomain}
+                                />
+                            }
+                        >
+                            <VictoryAxis
+                                tickValues={
+                                    _.isEmpty(zoomBrushAxisValues)
+                                        ? _.map(data, zoomBrushAxisValuesExtractor)
+                                        : zoomBrushAxisValues
+                                }
+                                tickFormat={zoomBrushAxisFormatter}
+                            />
 
-                <VictoryLine
-                    style={{
-                        data: { stroke: "#c43a31" },
-                        parent: { border: "1px solid #ccc" },
-                        ...lineStyle
-                    }}
-                    data={data}
-                    domain={getDomain()}
-                    {...lineProps}
-                />
-            </VictoryChart>
+                            <VictoryLine
+                                style={{
+                                    data: { stroke: "#c43a31" },
+                                    parent: { border: "1px solid #ccc" },
+                                    ...lineStyle
+                                }}
+                                data={data}
+                                domain={getDomain()}
+                                {...lineProps}
+                            />
+                        </VictoryChart>
+                    )
+                    : <></>
+            }
         </View>
     )
 }
