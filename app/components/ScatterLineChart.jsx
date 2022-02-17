@@ -11,10 +11,22 @@ import {
     VictoryBrushContainer,
     VictoryVoronoiContainer,
     VictoryArea,
+    VictoryPortal,
     createContainer,
 } from 'victory-native'
 
 const VictoryZoomVoronoiContainer = createContainer("zoom", "voronoi")
+
+const getFilteredValueFromObjectMatrix = (matrix, iteratee, formatter) =>
+    formatter(
+        iteratee(
+            iteratee(
+                matrix,
+                (set) => formatter(iteratee(set, (item) => formatter(item)))
+            ),
+            (item) => formatter(item)
+        )
+    )
 
 const ScatterLineChart = ({
     lineStyle = {},
@@ -40,12 +52,12 @@ const ScatterLineChart = ({
 
     const getDomain = () => ({
         x: [
-            xDataItemValueExtractor(_.minBy(dataSets, (dataSet) => xDataItemValueExtractor(_.minBy(dataSet, (item) => xDataItemValueExtractor(item))))) - 2,
-            xDataItemValueExtractor(_.maxBy(dataSets, (dataSet) => xDataItemValueExtractor(_.maxBy(dataSet, (item) => xDataItemValueExtractor(item))))) + 2
+            getFilteredValueFromObjectMatrix(dataSets, _.minBy, xDataItemValueExtractor) - 2,
+            getFilteredValueFromObjectMatrix(dataSets, _.maxBy, xDataItemValueExtractor) + 2
         ],
         y: [
-            yDataItemValueExtractor(_.minBy(dataSets, (dataSet) => yDataItemValueExtractor(_.minBy(dataSet, (item) => yDataItemValueExtractor(item))))) - 2,
-            yDataItemValueExtractor(_.maxBy(dataSets, (dataSet) => yDataItemValueExtractor(_.maxBy(dataSet, (item) => yDataItemValueExtractor(item))))) + 2
+            getFilteredValueFromObjectMatrix(dataSets, _.minBy, yDataItemValueExtractor) - 2,
+            getFilteredValueFromObjectMatrix(dataSets, _.maxBy, yDataItemValueExtractor) + 2
         ],
     })
 
@@ -57,36 +69,61 @@ const ScatterLineChart = ({
 
     const isDimensionalZoomEnabled = () => _.toLower(zoomDimension) === 'x' || _.toLower(zoomDimension) === 'y'
 
-    const calculateBrushMaximumPercentualSize = () => (
-        Math.abs(zoomBrushAxisValuesExtractor(_.minBy(dataSets, (dataSet) => zoomBrushAxisValuesExtractor(_.minBy(dataSet, (item) => zoomBrushAxisValuesExtractor(item))))))
-        + Math.abs(zoomBrushAxisValuesExtractor(_.maxBy(dataSets, (dataSet) => zoomBrushAxisValuesExtractor(_.maxBy(dataSet, (item) => zoomBrushAxisValuesExtractor(item))))))
+    const calculateBrushMaximumSize = () => (
+        Math.abs(getFilteredValueFromObjectMatrix(dataSets, _.minBy, zoomBrushAxisValuesExtractor))
+        + Math.abs(getFilteredValueFromObjectMatrix(dataSets, _.maxBy, zoomBrushAxisValuesExtractor))
         * (zoomBrushPercentualSize / 100)
     )
 
-    const calculateBrushMinimumPercentualSize = () => (
-        zoomBrushAxisValuesExtractor(
-            _.minBy(
-                dataSets,
-                (dataSet) => zoomBrushAxisValuesExtractor(_.minBy(dataSet, (item) => zoomBrushAxisValuesExtractor(item)))
-            )
-        )
-    )
+    const calculateBrushMinimumSize = () => getFilteredValueFromObjectMatrix(dataSets, _.minBy, zoomBrushAxisValuesExtractor)
 
     const getBrushDomain = () =>
         _.toLower(zoomDimension) === 'x'
             ? ({
                 x: [
-                    calculateBrushMinimumPercentualSize(),
-                    calculateBrushMaximumPercentualSize()
+                    calculateBrushMinimumSize(),
+                    calculateBrushMaximumSize()
                 ]
             })
             :
             ({
                 y: [
-                    calculateBrushMinimumPercentualSize(),
-                    calculateBrushMaximumPercentualSize()
+                    calculateBrushMinimumSize(),
+                    calculateBrushMaximumSize()
                 ]
             })
+
+    const LineScatterGraphics = () => _.map(
+        dataSets,
+        (dataSet) => (
+            <React.Fragment key={_.sumBy(dataSet, o => o.x + o.y)}>
+                <VictoryLine
+                    style={{
+                        data: { stroke: "#c43a31" },
+                        parent: { border: "1px solid #ccc" },
+                        ...lineStyle
+                    }}
+                    data={dataSet}
+                    domain={getDomain()}
+                    {...lineProps}
+                />
+
+                <VictoryScatter
+                    style={{
+                        data: { fill: "#c43a31" },
+                        labels: { fill: "black", fontSize: 18 },
+                        ...scatterStyle
+                    }}
+                    labels={({ datum }) => `x: ${datum.x}, y: ${datum.y}`}
+                    labelComponent={<VictoryTooltip renderInPortal={false} />}
+                    size={7}
+                    data={dataSet}
+                    domain={getDomain()}
+                    {...scatterProps}
+                />
+            </React.Fragment>
+        )
+    )
 
     return (
         <View style={styles.container}>
@@ -103,6 +140,7 @@ const ScatterLineChart = ({
                         )
                         : <VictoryVoronoiContainer />
                 }
+                domain={getDomain()}
                 style={style}
                 scale={scale}
                 {...props}
@@ -121,41 +159,7 @@ const ScatterLineChart = ({
                     labels={() => 'Projection'}
                 />
 
-                {
-                    _.map(
-                        dataSets,
-                        (dataSet) => {
-                            return (
-                                <>
-                                    <VictoryLine
-                                        style={{
-                                            data: { stroke: "#c43a31" },
-                                            parent: { border: "1px solid #ccc" },
-                                            ...lineStyle
-                                        }}
-                                        data={dataSet}
-                                        domain={getDomain()}
-                                        {...lineProps}
-                                    />
-
-                                    <VictoryScatter
-                                        style={{
-                                            data: { fill: "#c43a31" },
-                                            labels: { fill: "black", fontSize: 18 },
-                                            ...scatterStyle
-                                        }}
-                                        labels={({ datum }) => `x: ${datum.x}, y: ${datum.y}`}
-                                        labelComponent={<VictoryTooltip />}
-                                        size={7}
-                                        data={dataSet}
-                                        domain={getDomain()}
-                                        {...scatterProps}
-                                    />
-                                </>
-                            )
-                        }
-                    )
-                }
+                {LineScatterGraphics()}
             </VictoryChart>
 
             {
@@ -181,19 +185,22 @@ const ScatterLineChart = ({
                                 CUJO ESTE POSSUIR A MAIOR RETA SERA O VETOR VENCEDOR PARA EXIBICAO NO
                                 EIXO DE VALORES DO BRUSH DO ZOOM
                             */}
-                            <VictoryAxis
+
+                            {console.log('maiorVetor', _.map(dataSets, (dataSet) => [_.sumBy(dataSet)]))}
+
+                            {/* <VictoryAxis
                                 tickValues={
                                     _.isEmpty(zoomBrushAxisValues)
                                         ? _.map(data, zoomBrushAxisValuesExtractor)
                                         : zoomBrushAxisValues
                                 }
                                 tickFormat={zoomBrushAxisFormatter}
-                            />
+                            /> */}
 
                             {/*
                                 EXIBIR AQUI APENAS OS LINE CHARTS DE CADA DATASET
                             */}
-                            <VictoryLine
+                            {/* <VictoryLine
                                 style={{
                                     data: { stroke: "#c43a31" },
                                     parent: { border: "1px solid #ccc" },
@@ -202,11 +209,12 @@ const ScatterLineChart = ({
                                 data={data}
                                 domain={getDomain()}
                                 {...lineProps}
-                            />
+                            /> */}
                         </VictoryChart>
                     )
                     : <></>
             }
+
         </View>
     )
 }
