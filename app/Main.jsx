@@ -9,7 +9,7 @@ const Main = () => (
             style={{ flex: 1 }}
             zoomDimension="x"
             zoomBrushPercentualSize={50}
-            zoomBrushAxisValuesExtractor={(item) => item.x}
+            zoomBrushAxisValueExtractor={(item) => item.x}
             dataSets={[
                 [
                     { x: 1, y: 1 },

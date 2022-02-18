@@ -47,7 +47,7 @@ const ScatterLineChart = ({
     zoomScale = undefined,
     zoomBrushAxisValues = [],
     zoomBrushPercentualSize = 30,
-    zoomBrushAxisValuesExtractor = (value) => value,
+    zoomBrushAxisValueExtractor = (value) => value,
     zoomBrushAxisFormatter = (value) => value,
     xDataItemValueExtractor = (item) => item.x,
     yDataItemValueExtractor = (item) => item.y,
@@ -74,8 +74,17 @@ const ScatterLineChart = ({
         ],
     })
 
-    const onChangeZoomDomain = (domain) =>
-        setZoomDomain(prevState => prevState !== domain ? domain : prevState)
+    const onChangeZoomDomain = (domain) => {
+        let newDomain = domain
+
+        if (zoomDimension === 'x')
+            newDomain = { ...domain, y: [domain.y[0] - 1, domain.y[1] + 1] }
+
+        if (zoomDimension === 'y')
+            newDomain = { ...domain, x: [domain.x[0] - 1, domain.x[1] + 1] }
+
+        setZoomDomain(prevState => prevState !== newDomain ? newDomain : prevState)
+    }
 
     const onChangeSelectedDomain = (domain) =>
         setSelectedDomain(prevState => prevState !== domain ? domain : prevState)
@@ -84,12 +93,12 @@ const ScatterLineChart = ({
 
     const calculateBrushMaximumSize = () => (
         getAxisLineLength(
-            getAxisMinValue(zoomBrushAxisValuesExtractor),
-            getAxisMaxValue(zoomBrushAxisValuesExtractor)
+            getAxisMinValue(zoomBrushAxisValueExtractor),
+            getAxisMaxValue(zoomBrushAxisValueExtractor)
         ) * (zoomBrushPercentualSize / 100)
     )
 
-    const calculateBrushMinimumSize = () => getAxisMinValue(zoomBrushAxisValuesExtractor)
+    const calculateBrushMinimumSize = () => getAxisMinValue(zoomBrushAxisValueExtractor)
 
     const getBrushDomain = () =>
         _.toLower(zoomDimension) === 'x'
@@ -108,11 +117,11 @@ const ScatterLineChart = ({
             })
 
     const getZoomBrushAxisValues = () => {
-        const axisMinValue = getAxisMinValue(zoomBrushAxisValuesExtractor)
+        const axisMinValue = getAxisMinValue(zoomBrushAxisValueExtractor)
 
         const axisLength = getAxisLineLength(
             axisMinValue,
-            getAxisMaxValue(zoomBrushAxisValuesExtractor)
+            getAxisMaxValue(zoomBrushAxisValueExtractor)
         )
 
         let axisValues = Array(axisLength + 1)
@@ -124,39 +133,35 @@ const ScatterLineChart = ({
     const LineGraphics = () => _.map(
         dataSets,
         (dataSet) => (
-            <React.Fragment key={_.sumBy(dataSet, o => o.x + o.y)}>
-                <VictoryLine
-                    style={{
-                        data: { stroke: "#c43a31" },
-                        parent: { border: "1px solid #ccc" },
-                        ...lineStyle
-                    }}
-                    data={dataSet}
-                    domain={getDomain()}
-                    {...lineProps}
-                />
-            </React.Fragment>
+            <VictoryLine
+                key={_.sumBy(dataSet, o => o.x + o.y)}
+                style={{
+                    data: { stroke: "#c43a31" },
+                    parent: { border: "1px solid #ccc" },
+                    ...lineStyle
+                }}
+                data={dataSet}
+                {...lineProps}
+            />
         )
     )
 
     const ScatterGraphics = () => _.map(
         dataSets,
         (dataSet) => (
-            <React.Fragment key={_.sumBy(dataSet, o => o.x + o.y)}>
-                <VictoryScatter
-                    style={{
-                        data: { fill: "#c43a31" },
-                        labels: { fill: "black", fontSize: 18 },
-                        ...scatterStyle
-                    }}
-                    labels={({ datum }) => `x: ${datum.x}, y: ${datum.y}`}
-                    labelComponent={<VictoryTooltip renderInPortal={false} />}
-                    size={7}
-                    data={dataSet}
-                    domain={getDomain()}
-                    {...scatterProps}
-                />
-            </React.Fragment>
+            <VictoryScatter
+                key={_.sumBy(dataSet, o => o.x + o.y)}
+                style={{
+                    data: { fill: "#c43a31" },
+                    labels: { fill: "black", fontSize: 18 },
+                    ...scatterStyle
+                }}
+                labels={({ datum }) => `x: ${datum.x}, y: ${datum.y}`}
+                labelComponent={<VictoryTooltip renderInPortal={false} />}
+                size={7}
+                data={dataSet}
+                {...scatterProps}
+            />
         )
     )
 
