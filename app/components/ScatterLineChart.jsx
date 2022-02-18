@@ -11,7 +11,6 @@ import {
     VictoryBrushContainer,
     VictoryVoronoiContainer,
     VictoryArea,
-    VictoryPortal,
     createContainer,
 } from 'victory-native'
 
@@ -27,6 +26,17 @@ const getFilteredValueFromObjectMatrix = (matrix, iteratee, formatter) =>
             (item) => formatter(item)
         )
     )
+
+const getAxisLineLength = (min, max) => {
+    let length = 0
+
+    if (min <= 0 && max >= 0)
+        length = Math.abs(max) + Math.abs(min)
+    else
+        length = Math.abs(max - min)
+
+    return length
+}
 
 const ScatterLineChart = ({
     lineStyle = {},
@@ -50,14 +60,17 @@ const ScatterLineChart = ({
     const [zoomDomain, setZoomDomain] = useState({})
     const [selectedDomain, setSelectedDomain] = useState({})
 
+    const getAxisMinValue = (axisExtractor) => getFilteredValueFromObjectMatrix(dataSets, _.minBy, axisExtractor) - 2
+    const getAxisMaxValue = (axisExtractor) => getFilteredValueFromObjectMatrix(dataSets, _.maxBy, axisExtractor) + 2
+
     const getDomain = () => ({
         x: [
-            getFilteredValueFromObjectMatrix(dataSets, _.minBy, xDataItemValueExtractor) - 2,
-            getFilteredValueFromObjectMatrix(dataSets, _.maxBy, xDataItemValueExtractor) + 2
+            getAxisMinValue(xDataItemValueExtractor),
+            getAxisMaxValue(xDataItemValueExtractor)
         ],
         y: [
-            getFilteredValueFromObjectMatrix(dataSets, _.minBy, yDataItemValueExtractor) - 2,
-            getFilteredValueFromObjectMatrix(dataSets, _.maxBy, yDataItemValueExtractor) + 2
+            getAxisMinValue(yDataItemValueExtractor),
+            getAxisMaxValue(yDataItemValueExtractor)
         ],
     })
 
@@ -70,12 +83,13 @@ const ScatterLineChart = ({
     const isDimensionalZoomEnabled = () => _.toLower(zoomDimension) === 'x' || _.toLower(zoomDimension) === 'y'
 
     const calculateBrushMaximumSize = () => (
-        Math.abs(getFilteredValueFromObjectMatrix(dataSets, _.minBy, zoomBrushAxisValuesExtractor))
-        + Math.abs(getFilteredValueFromObjectMatrix(dataSets, _.maxBy, zoomBrushAxisValuesExtractor))
-        * (zoomBrushPercentualSize / 100)
+        getAxisLineLength(
+            getAxisMinValue(zoomBrushAxisValuesExtractor),
+            getAxisMaxValue(zoomBrushAxisValuesExtractor)
+        ) * (zoomBrushPercentualSize / 100)
     )
 
-    const calculateBrushMinimumSize = () => getFilteredValueFromObjectMatrix(dataSets, _.minBy, zoomBrushAxisValuesExtractor)
+    const calculateBrushMinimumSize = () => getAxisMinValue(zoomBrushAxisValuesExtractor)
 
     const getBrushDomain = () =>
         _.toLower(zoomDimension) === 'x'
@@ -93,7 +107,21 @@ const ScatterLineChart = ({
                 ]
             })
 
-    const LineScatterGraphics = () => _.map(
+    const getZoomBrushAxisValues = () => {
+        const axisMinValue = getAxisMinValue(zoomBrushAxisValuesExtractor)
+
+        const axisLength = getAxisLineLength(
+            axisMinValue,
+            getAxisMaxValue(zoomBrushAxisValuesExtractor)
+        )
+
+        let axisValues = Array(axisLength + 1)
+        axisValues = _.map(axisValues, (value, index) => axisMinValue + index)
+
+        return axisValues
+    }
+
+    const LineGraphics = () => _.map(
         dataSets,
         (dataSet) => (
             <React.Fragment key={_.sumBy(dataSet, o => o.x + o.y)}>
@@ -107,7 +135,14 @@ const ScatterLineChart = ({
                     domain={getDomain()}
                     {...lineProps}
                 />
+            </React.Fragment>
+        )
+    )
 
+    const ScatterGraphics = () => _.map(
+        dataSets,
+        (dataSet) => (
+            <React.Fragment key={_.sumBy(dataSet, o => o.x + o.y)}>
                 <VictoryScatter
                     style={{
                         data: { fill: "#c43a31" },
@@ -159,7 +194,8 @@ const ScatterLineChart = ({
                     labels={() => 'Projection'}
                 />
 
-                {LineScatterGraphics()}
+                {LineGraphics()}
+                {ScatterGraphics()}
             </VictoryChart>
 
             {
@@ -179,37 +215,16 @@ const ScatterLineChart = ({
                                 />
                             }
                         >
-                            {/* PARA SABER A MAIOR RETA DE EIXO ENTRE OS DATASETS,
-                                FAZER UM SOMATORIO DOS VALORES ABSOLUTOS EM CADA DATASET E
-                                POR FIM, COMPARAR QUAL A MAIOR RETA, COM ISSO A POSICAO DE VETOR,
-                                CUJO ESTE POSSUIR A MAIOR RETA SERA O VETOR VENCEDOR PARA EXIBICAO NO
-                                EIXO DE VALORES DO BRUSH DO ZOOM
-                            */}
-
-                            {console.log('maiorVetor', _.map(dataSets, (dataSet) => [_.sumBy(dataSet)]))}
-
-                            {/* <VictoryAxis
+                            <VictoryAxis
                                 tickValues={
                                     _.isEmpty(zoomBrushAxisValues)
-                                        ? _.map(data, zoomBrushAxisValuesExtractor)
+                                        ? getZoomBrushAxisValues()
                                         : zoomBrushAxisValues
                                 }
                                 tickFormat={zoomBrushAxisFormatter}
-                            /> */}
+                            />
 
-                            {/*
-                                EXIBIR AQUI APENAS OS LINE CHARTS DE CADA DATASET
-                            */}
-                            {/* <VictoryLine
-                                style={{
-                                    data: { stroke: "#c43a31" },
-                                    parent: { border: "1px solid #ccc" },
-                                    ...lineStyle
-                                }}
-                                data={data}
-                                domain={getDomain()}
-                                {...lineProps}
-                            /> */}
+                            {LineGraphics()}
                         </VictoryChart>
                     )
                     : <></>
