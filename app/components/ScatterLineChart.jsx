@@ -189,20 +189,26 @@ const ScatterLineChart = ({
                 scale={scale}
                 {...props}
             >
-                <VictoryArea
-                    style={{
-                        data: {
-                            fill: '#c43a31',
-                            fillOpacity: 0.2,
-                            stroke: '#c43a31',
-                            strokeWidth: 3,
-                            strokeDasharray: 5,
-                        },
-                        ...projectionStyle,
-                    }}
-                    data={projectionData}
-                    labels={() => 'Projection'}
-                />
+                {
+                    !_.isEmpty(projectionData)
+                        ? (
+                            <VictoryArea
+                                style={{
+                                    data: {
+                                        fill: '#c43a31',
+                                        fillOpacity: 0.2,
+                                        stroke: '#c43a31',
+                                        strokeWidth: 3,
+                                        strokeDasharray: 5,
+                                    },
+                                    ...projectionStyle,
+                                }}
+                                data={projectionData}
+                                labels={() => 'Projection'}
+                            />
+                        )
+                        : undefined
+                }
 
                 {LineGraphics()}
                 {ScatterGraphics()}
@@ -237,7 +243,7 @@ const ScatterLineChart = ({
                             {LineGraphics()}
                         </VictoryChart>
                     )
-                    : <></>
+                    : undefined
             }
 
         </View>
