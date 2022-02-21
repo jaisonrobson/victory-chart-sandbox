@@ -169,6 +169,57 @@ const ScatterLineChart = ({
         )
     )
 
+    const ProjectionGraphic = () =>
+        !_.isEmpty(projectionData)
+            ? (
+                <VictoryArea
+                    style={{
+                        data: {
+                            fill: '#c43a31',
+                            fillOpacity: 0.2,
+                            stroke: '#c43a31',
+                            strokeWidth: 3,
+                            strokeDasharray: 5,
+                        },
+                        ...projectionStyle,
+                    }}
+                    data={projectionData}
+                    labels={() => 'Projection'}
+                />
+            )
+            : undefined
+
+    const BrushGraphic = () =>
+        isDimensionalZoomEnabled()
+            ? (
+                <VictoryChart
+                    style={{ flex: 1 }}
+                    scale={zoomScale}
+                    containerComponent={
+                        <VictoryBrushContainer
+                            allowDraw={false}
+                            allowResize={false}
+                            responsive={false}
+                            brushDimension={_.toLower(zoomDimension)}
+                            brushDomain={isDimensionalZoomEnabled() ? getBrushDomain() : selectedDomain}
+                            onBrushDomainChange={onChangeZoomDomain}
+                        />
+                    }
+                >
+                    <VictoryAxis
+                        tickValues={
+                            _.isEmpty(zoomBrushAxisValues)
+                                ? getZoomBrushAxisValues()
+                                : zoomBrushAxisValues
+                        }
+                        tickFormat={zoomBrushAxisFormatter}
+                    />
+
+                    {LineGraphics()}
+                </VictoryChart>
+            )
+            : undefined
+
     return (
         <View style={styles.container}>
             <VictoryChart
@@ -189,63 +240,14 @@ const ScatterLineChart = ({
                 scale={scale}
                 {...props}
             >
-                {
-                    !_.isEmpty(projectionData)
-                        ? (
-                            <VictoryArea
-                                style={{
-                                    data: {
-                                        fill: '#c43a31',
-                                        fillOpacity: 0.2,
-                                        stroke: '#c43a31',
-                                        strokeWidth: 3,
-                                        strokeDasharray: 5,
-                                    },
-                                    ...projectionStyle,
-                                }}
-                                data={projectionData}
-                                labels={() => 'Projection'}
-                            />
-                        )
-                        : undefined
-                }
+                {ProjectionGraphic()}
 
                 {LineGraphics()}
+
                 {ScatterGraphics()}
             </VictoryChart>
 
-            {
-                isDimensionalZoomEnabled()
-                    ? (
-                        <VictoryChart
-                            style={{ flex: 1 }}
-                            scale={zoomScale}
-                            containerComponent={
-                                <VictoryBrushContainer
-                                    allowDraw={false}
-                                    allowResize={false}
-                                    responsive={false}
-                                    brushDimension={_.toLower(zoomDimension)}
-                                    brushDomain={isDimensionalZoomEnabled() ? getBrushDomain() : selectedDomain}
-                                    onBrushDomainChange={onChangeZoomDomain}
-                                />
-                            }
-                        >
-                            <VictoryAxis
-                                tickValues={
-                                    _.isEmpty(zoomBrushAxisValues)
-                                        ? getZoomBrushAxisValues()
-                                        : zoomBrushAxisValues
-                                }
-                                tickFormat={zoomBrushAxisFormatter}
-                            />
-
-                            {LineGraphics()}
-                        </VictoryChart>
-                    )
-                    : undefined
-            }
-
+            {BrushGraphic()}
         </View>
     )
 }
