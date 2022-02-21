@@ -10,6 +10,28 @@ const Main = () => (
             zoomDimension="x"
             zoomBrushPercentualSize={50}
             zoomBrushAxisValueExtractor={(item) => item.x}
+            dataSetsStyles={[
+                {
+                    scatter: {
+                        data: { fill: "#265196" },
+                        labels: { fill: "black", fontSize: 18 },
+                    },
+                    line: {
+                        data: { stroke: "#265196" },
+                        parent: { border: "1px solid #ccc" },
+                    },
+                },
+                {
+                    scatter: {
+                        data: { fill: "#c43a31" },
+                        labels: { fill: "black", fontSize: 18 },
+                    },
+                    line: {
+                        data: { stroke: "#c43a31" },
+                        parent: { border: "1px solid #ccc" },
+                    },
+                }
+            ]}
             dataSets={[
                 [
                     { x: 1, y: 1 },

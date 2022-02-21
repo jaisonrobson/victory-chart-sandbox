@@ -52,7 +52,9 @@ const ScatterLineChart = ({
     xDataItemValueExtractor = (item) => item.x,
     yDataItemValueExtractor = (item) => item.y,
     scale = undefined,
+    dataSetsStyles = [],
     dataSets = [[]],
+    projectionStyle = {},
     projectionData = [],
     style = {},
     ...props
@@ -132,12 +134,13 @@ const ScatterLineChart = ({
 
     const LineGraphics = () => _.map(
         dataSets,
-        (dataSet) => (
+        (dataSet, index) => (
             <VictoryLine
                 key={_.sumBy(dataSet, o => o.x + o.y)}
                 style={{
                     data: { stroke: "#c43a31" },
                     parent: { border: "1px solid #ccc" },
+                    ...dataSetsStyles[index].line,
                     ...lineStyle
                 }}
                 data={dataSet}
@@ -148,12 +151,13 @@ const ScatterLineChart = ({
 
     const ScatterGraphics = () => _.map(
         dataSets,
-        (dataSet) => (
+        (dataSet, index) => (
             <VictoryScatter
                 key={_.sumBy(dataSet, o => o.x + o.y)}
                 style={{
                     data: { fill: "#c43a31" },
                     labels: { fill: "black", fontSize: 18 },
+                    ...dataSetsStyles[index].scatter,
                     ...scatterStyle
                 }}
                 labels={({ datum }) => `x: ${datum.x}, y: ${datum.y}`}
@@ -193,7 +197,8 @@ const ScatterLineChart = ({
                             stroke: '#c43a31',
                             strokeWidth: 3,
                             strokeDasharray: 5,
-                        }
+                        },
+                        ...projectionStyle,
                     }}
                     data={projectionData}
                     labels={() => 'Projection'}
