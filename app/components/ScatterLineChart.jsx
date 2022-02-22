@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { View, StyleSheet } from 'react-native'
 import _ from 'lodash'
+import moment from 'moment'
 
 import {
     VictoryChart,
@@ -16,17 +17,36 @@ import {
 
 const VictoryZoomVoronoiContainer = createContainer("zoom", "voronoi")
 
-const getFilteredValueFromObjectMatrix = (matrix, iteratee, formatter) =>
-    formatter(
-        iteratee(
-            iteratee(
-                matrix,
-                (set) => formatter(iteratee(set, (item) => formatter(item)))
-            ),
-            (item) => formatter(item)
-        )
-    )
+const getFilteredValueFromObjectMatrix = (matrix, iteratee, dataExtractor, dataType) => {
+    let result = undefined
 
+    switch (dataType) {
+        case 'Date': {
+            result = iteratee(
+                _.map(
+                    matrix,
+                    (dataSet) => iteratee(_.map(dataSet, dataExtractor))
+                )
+            )
+
+            break
+        }
+        default: {
+            result = iteratee(
+                _.map(
+                    matrix,
+                    dataSet => iteratee(_.map(dataSet, dataExtractor))
+                )
+            )
+
+            break
+        }
+    }
+
+    return result
+}
+
+//AJUSTAR O CALCULO DO TAMANHO DO VETOR PARA TRABALHAR COM DATAS TAMBEM
 const getAxisLineLength = (min, max) => {
     let length = 0
 
@@ -44,14 +64,17 @@ const ScatterLineChart = ({
     scatterStyle = {},
     scatterProps = {},
     zoomDimension = undefined,
-    zoomScale = undefined,
+    zoomScale = { x: 'linear', y: 'linear' },
     zoomBrushAxisValues = [],
     zoomBrushPercentualSize = 30,
+    zoomBrushDataType = 'Number',
     zoomBrushAxisValueExtractor = (value) => value,
     zoomBrushAxisFormatter = (value) => value,
+    xDataType = 'Number',
+    yDataType = 'Number',
     xDataItemValueExtractor = (item) => item.x,
     yDataItemValueExtractor = (item) => item.y,
-    scale = undefined,
+    scale = { x: 'linear', y: 'linear' },
     dataSetsStyles = [],
     dataSets = [[]],
     projectionStyle = {},
@@ -62,17 +85,60 @@ const ScatterLineChart = ({
     const [zoomDomain, setZoomDomain] = useState({})
     const [selectedDomain, setSelectedDomain] = useState({})
 
-    const getAxisMinValue = (axisExtractor) => getFilteredValueFromObjectMatrix(dataSets, _.minBy, axisExtractor) - 2
-    const getAxisMaxValue = (axisExtractor) => getFilteredValueFromObjectMatrix(dataSets, _.maxBy, axisExtractor) + 2
+    const getIterateeAccordingToDataType = (dataType, iterateeType) => {
+        if (dataType === 'Date')
+            return iterateeType === 'min' ? moment.min : moment.max
+        else
+            return iterateeType === 'min' ? _.minBy : _.maxBy
+    }
+
+    const getDataExtractorAccordingToDataType = (dataType, extractor) =>
+        dataType === 'Date'
+            ? item => moment(extractor(item))
+            : extractor
+
+    const getAxisMinValue = (axisExtractor, dataType) => {
+        let result = getFilteredValueFromObjectMatrix(
+            dataSets,
+            getIterateeAccordingToDataType(dataType, 'min'),
+            getDataExtractorAccordingToDataType(dataType, axisExtractor),
+            dataType
+        )
+
+        if (dataType === 'Date') {
+            result = moment(result).subtract(2, 'days')
+        } else {
+            result = result - 2
+        }
+
+        return result
+    }
+
+    const getAxisMaxValue = (axisExtractor, dataType) => {
+        let result = getFilteredValueFromObjectMatrix(
+            dataSets,
+            getIterateeAccordingToDataType(dataType, 'max'),
+            getDataExtractorAccordingToDataType(dataType, axisExtractor),
+            dataType
+        )
+
+        if (dataType === 'Date') {
+            result = moment(result).add(2, 'days')
+        } else {
+            result = result + 2
+        }
+
+        return result
+    }
 
     const getDomain = () => ({
         x: [
-            getAxisMinValue(xDataItemValueExtractor),
-            getAxisMaxValue(xDataItemValueExtractor)
+            getAxisMinValue(xDataItemValueExtractor, xDataType),
+            getAxisMaxValue(xDataItemValueExtractor, xDataType)
         ],
         y: [
-            getAxisMinValue(yDataItemValueExtractor),
-            getAxisMaxValue(yDataItemValueExtractor)
+            getAxisMinValue(yDataItemValueExtractor, yDataType),
+            getAxisMaxValue(yDataItemValueExtractor, yDataType)
         ],
     })
 
@@ -94,13 +160,14 @@ const ScatterLineChart = ({
     const isDimensionalZoomEnabled = () => _.toLower(zoomDimension) === 'x' || _.toLower(zoomDimension) === 'y'
 
     const calculateBrushMaximumSize = () => (
+        //AJUSTAR O CALCULO DO TAMANHO DO VETOR PARA TRABALHAR COM DATAS TAMBEM
         getAxisLineLength(
-            getAxisMinValue(zoomBrushAxisValueExtractor),
-            getAxisMaxValue(zoomBrushAxisValueExtractor)
+            getAxisMinValue(zoomBrushAxisValueExtractor, zoomBrushDataType),
+            getAxisMaxValue(zoomBrushAxisValueExtractor, zoomBrushDataType)
         ) * (zoomBrushPercentualSize / 100)
     )
 
-    const calculateBrushMinimumSize = () => getAxisMinValue(zoomBrushAxisValueExtractor)
+    const calculateBrushMinimumSize = () => getAxisMinValue(zoomBrushAxisValueExtractor, zoomBrushDataType)
 
     const getBrushDomain = () =>
         _.toLower(zoomDimension) === 'x'
@@ -119,11 +186,11 @@ const ScatterLineChart = ({
             })
 
     const getZoomBrushAxisValues = () => {
-        const axisMinValue = getAxisMinValue(zoomBrushAxisValueExtractor)
+        const axisMinValue = getAxisMinValue(zoomBrushAxisValueExtractor, zoomBrushDataType)
 
         const axisLength = getAxisLineLength(
             axisMinValue,
-            getAxisMaxValue(zoomBrushAxisValueExtractor)
+            getAxisMaxValue(zoomBrushAxisValueExtractor, zoomBrushDataType)
         )
 
         let axisValues = Array(axisLength + 1)
@@ -219,6 +286,8 @@ const ScatterLineChart = ({
                 </VictoryChart>
             )
             : undefined
+
+    // return <View style={styles.container} />
 
     return (
         <View style={styles.container}>
