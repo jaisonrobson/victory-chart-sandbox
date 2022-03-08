@@ -12,8 +12,10 @@ const Main = () => (
             xDataType="Date"
             zoomDimension="x"
             zoomScale={{ x: 'time', y: 'linear' }}
+            zoomBrushDataType="Date"
             zoomBrushPercentualSize={50}
             zoomBrushAxisValueExtractor={(item) => item.x}
+            zoomBrushAxisFormatter={value => value.format("DD/MM/YYYY")}
             dataSetsStyles={[
                 {
                     scatter: {

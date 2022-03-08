@@ -46,14 +46,28 @@ const getFilteredValueFromObjectMatrix = (matrix, iteratee, dataExtractor, dataT
     return result
 }
 
-//AJUSTAR O CALCULO DO TAMANHO DO VETOR PARA TRABALHAR COM DATAS TAMBEM
-const getAxisLineLength = (min, max) => {
+const getAxisLineLength = (min, max, dataType) => {
     let length = 0
 
-    if (min <= 0 && max >= 0)
-        length = Math.abs(max) + Math.abs(min)
-    else
-        length = Math.abs(max - min)
+    switch (dataType) {
+        case "Date": {
+            length = Math.abs(
+                moment(min)
+                    .startOf('day')
+                    .diff(moment(max).startOf('day'), 'days')
+            ) + 1
+
+            break
+        }
+
+        default: {
+            if (min <= 0 && max >= 0)
+                length = Math.abs(max) + Math.abs(min)
+            else
+                length = Math.abs(max - min)
+            break
+        }
+    }
 
     return length
 }
@@ -159,13 +173,19 @@ const ScatterLineChart = ({
 
     const isDimensionalZoomEnabled = () => _.toLower(zoomDimension) === 'x' || _.toLower(zoomDimension) === 'y'
 
-    const calculateBrushMaximumSize = () => (
-        //AJUSTAR O CALCULO DO TAMANHO DO VETOR PARA TRABALHAR COM DATAS TAMBEM
-        getAxisLineLength(
+    const calculateBrushMaximumSize = () => {
+        let result = getAxisLineLength(
             getAxisMinValue(zoomBrushAxisValueExtractor, zoomBrushDataType),
-            getAxisMaxValue(zoomBrushAxisValueExtractor, zoomBrushDataType)
+            getAxisMaxValue(zoomBrushAxisValueExtractor, zoomBrushDataType),
+            zoomBrushDataType
         ) * (zoomBrushPercentualSize / 100)
-    )
+
+        if (zoomBrushDataType === 'Date') {
+            result = moment(getAxisMinValue(zoomBrushAxisValueExtractor, zoomBrushDataType)).add(result, 'days')
+        }
+
+        return result
+    }
 
     const calculateBrushMinimumSize = () => getAxisMinValue(zoomBrushAxisValueExtractor, zoomBrushDataType)
 
@@ -186,15 +206,30 @@ const ScatterLineChart = ({
             })
 
     const getZoomBrushAxisValues = () => {
+        let axisValues = []
+
         const axisMinValue = getAxisMinValue(zoomBrushAxisValueExtractor, zoomBrushDataType)
+        const axisMaxValue = getAxisMaxValue(zoomBrushAxisValueExtractor, zoomBrushDataType)
 
         const axisLength = getAxisLineLength(
             axisMinValue,
-            getAxisMaxValue(zoomBrushAxisValueExtractor, zoomBrushDataType)
+            axisMaxValue,
+            zoomBrushDataType
         )
 
-        let axisValues = Array(axisLength + 1)
-        axisValues = _.map(axisValues, (value, index) => axisMinValue + index)
+        if (zoomBrushDataType === 'Date') {
+            axisValues = Array(5)
+
+            const oneFourthDaysLength = Math.floor(axisLength / 4)
+
+            const initialDayMoment = moment(axisMinValue)
+
+            axisValues = _.map(axisValues, (value, index) => moment(initialDayMoment).add(index * oneFourthDaysLength, 'days'))
+        } else {
+            axisValues = Array(axisLength + 1)
+
+            axisValues = _.map(axisValues, (value, index) => axisMinValue + index)
+        }
 
         return axisValues
     }
