@@ -93,6 +93,7 @@ const ScatterLineChart = ({
     dataSets = [[]],
     projectionStyle = {},
     projectionData = [],
+    labelsExtractor = ({ datum }) => `x: ${datum.x}, y: ${datum.y}`,
     style = {},
     ...props
 }) => {
@@ -262,7 +263,7 @@ const ScatterLineChart = ({
                     ...dataSetsStyles[index].scatter,
                     ...scatterStyle
                 }}
-                labels={({ datum }) => `x: ${datum.x}, y: ${datum.y}`}
+                labels={labelsExtractor}
                 labelComponent={<VictoryTooltip renderInPortal={false} />}
                 size={7}
                 data={dataSet}
@@ -321,8 +322,6 @@ const ScatterLineChart = ({
                 </VictoryChart>
             )
             : undefined
-
-    // return <View style={styles.container} />
 
     return (
         <View style={styles.container}>

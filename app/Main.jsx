@@ -93,6 +93,7 @@ const Main = () => (
                 { x: 2.5, y: 3 },
                 { x: 8, y: 3 },
             ]}
+            labelsExtractor={({ datum }) => ` ${moment(datum.x).format("DD/MM/YYYY")}, R$ ${datum.y} `}
         />
     </View>
 )
